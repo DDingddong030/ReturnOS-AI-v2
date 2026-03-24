@@ -118,48 +118,111 @@ function calculateOptions(item) {
   const adjustedScores = Object.fromEntries(
     Object.entries(options).map(([k, v]) => [k, v.available ? v.expectedValue : -Infinity])
   );
-  const reasons = [];
 
   if (row.currentStock <= state.policy.lowStockThreshold && row.conditionGrade === "A") {
     adjustedScores.resale += 3500;
-    reasons.push("현재 재고가 낮아 재판매 우선순위가 높습니다.");
   }
   if (row.seasonDaysLeft <= state.policy.seasonUrgentThreshold) {
     adjustedScores.discount += 2800;
-    reasons.push("시즌 종료가 임박해 할인전환이 유리합니다.");
   }
   if (row.conditionGrade === "C") {
     adjustedScores.resale -= 4500;
     adjustedScores.repackagedResale -= 2500;
-    reasons.push("상품 상태가 좋지 않아 일반 재판매 점수를 낮췄습니다.");
   }
   if (row.conditionGrade === "A") {
     adjustedScores.resale += 1000;
-    reasons.push("상품 상태가 양호합니다.");
   }
   if (row.vendorReturnEligible) {
     adjustedScores.vendorReturn += 1200;
-    reasons.push("공급사 반송이 가능하며 손실이 가장 적은지 함께 비교했습니다.");
   }
   if (row.resaleValue <= state.policy.disposalValueThreshold && row.returnShippingCost >= 3000) {
     adjustedScores.dispose += 3000;
-    reasons.push("저가 상품이라 회수비 부담이 커 폐기 대안도 검토했습니다.");
-  }
-  if (row.resaleValue - row.returnShippingCost > 15000) {
-    reasons.push("회수비 대비 재판매 가치가 높습니다.");
   }
 
   const valid = Object.entries(adjustedScores).filter(([, v]) => Number.isFinite(v));
   valid.sort((a, b) => b[1] - a[1]);
   const [bestKey] = valid[0] || ["dispose"];
 
-  if (reasons.length === 0) reasons.push("손익 기준으로 가장 유리한 처리안을 선택했습니다.");
+  const reasons = getReasonsForRecommendation(row, bestKey, options, adjustedScores);
 
   return {
     options,
     recommendation: bestKey,
-    reasons: Array.from(new Set(reasons))
+    reasons
   };
+}
+
+
+function getReasonsForRecommendation(row, recommendation, options, adjustedScores) {
+  const adjusted = applyPolicyValues(row);
+  const sortedByScore = Object.entries(adjustedScores)
+    .filter(([, score]) => Number.isFinite(score))
+    .sort((a, b) => b[1] - a[1]);
+  const secondBest = sortedByScore[1];
+  const scoreGap = secondBest ? Math.round(sortedByScore[0][1] - secondBest[1]) : 0;
+
+  const reasonMap = {
+    resale: [],
+    repackagedResale: [],
+    discount: [],
+    vendorReturn: [],
+    dispose: []
+  };
+
+  if (row.conditionGrade === "A") {
+    reasonMap.resale.push("상품 상태가 양호해 일반 재판매에 유리합니다.");
+    reasonMap.repackagedResale.push("상품 상태가 양호해 재포장 후 재판매가 가능합니다.");
+  }
+  if (row.conditionGrade === "C") {
+    reasonMap.discount.push("상품 상태를 고려할 때 즉시 할인전환이 더 현실적입니다.");
+    reasonMap.dispose.push("상품 상태가 좋지 않아 폐기 검토 필요성이 높습니다.");
+  }
+
+  if (row.currentStock <= state.policy.lowStockThreshold) {
+    reasonMap.resale.push("현재 재고가 낮아 재판매 우선순위가 높습니다.");
+    reasonMap.repackagedResale.push("현재 재고가 낮아 재판매 계열 처리안이 유리합니다.");
+  }
+
+  if (row.seasonDaysLeft <= state.policy.seasonUrgentThreshold) {
+    reasonMap.discount.push("시즌 종료가 임박해 할인전환이 유리합니다.");
+  }
+
+  if (row.vendorReturnEligible) {
+    reasonMap.vendorReturn.push("공급사 반송이 가능한 건입니다.");
+    if (options.vendorReturn.available && options.vendorReturn.expectedValue >= (options.resale.expectedValue || -Infinity)) {
+      reasonMap.vendorReturn.push("공급사 반송 시 회수 금액이 충분해 손실을 줄일 수 있습니다.");
+    }
+  }
+
+  if (adjusted.repackagingCost > 0) {
+    reasonMap.repackagedResale.push("재포장 비용을 반영해도 재판매 계열 손익이 유효합니다.");
+  }
+
+  if (row.resaleValue <= state.policy.disposalValueThreshold && adjusted.returnShippingCost >= 3000) {
+    reasonMap.dispose.push("저가 상품 대비 회수비 부담이 커 폐기안이 합리적입니다.");
+  }
+
+  reasonMap.resale.push("회수비 대비 재판매 가치가 높습니다.");
+  reasonMap.repackagedResale.push("재포장 후에도 예상 손익이 다른 대안 대비 우수합니다.");
+  reasonMap.discount.push("할인전환 시 회수 가능한 금액이 높습니다.");
+  reasonMap.vendorReturn.push("다른 처리안 대비 공급사 반송의 손익이 우수합니다.");
+  reasonMap.dispose.push("다른 대안 대비 예상 손실이 가장 작습니다.");
+
+  const selected = [...new Set(reasonMap[recommendation] || [])];
+
+  if (scoreGap > 0) {
+    selected.unshift(`다른 대안 대비 손익 점수 우위가 약 ${scoreGap.toLocaleString("ko-KR")}점입니다.`);
+  }
+
+  if (!selected.length) {
+    selected.push("손익 계산 결과 가장 유리한 처리안으로 판단되었습니다.");
+  }
+
+  while (selected.length < 2) {
+    selected.push("정책 기준과 손익 점수를 종합해 우선 적용이 필요한 처리안입니다.");
+  }
+
+  return selected.slice(0, 4);
 }
 
 function calcPriority(item, recKey, expectedValue) {
@@ -379,18 +442,7 @@ function renderDetail(row) {
 
 
 function buildDetailReasons(row) {
-  const reasons = [...row.evaluation.reasons];
-  if (row.conditionGrade === "A") reasons.unshift("상품 상태가 양호합니다.");
-  if (row.resaleValue - applyPolicyValues(row).returnShippingCost > 15000) reasons.push("회수비 대비 재판매 가치가 높습니다.");
-  if (row.currentStock <= state.policy.lowStockThreshold) reasons.push("현재 재고가 낮아 재판매 우선순위가 높습니다.");
-  if (row.seasonDaysLeft <= state.policy.seasonUrgentThreshold) reasons.push("시즌 종료가 임박해 할인전환이 유리합니다.");
-  if (row.vendorReturnEligible && row.evaluation.recommendation === "vendorReturn") reasons.push("공급사 반송이 가능하며 손실이 가장 적습니다.");
-
-  const unique = Array.from(new Set(reasons));
-  if (unique.length < 3) {
-    unique.push("예상 손익이 가장 높은 처리안을 우선 추천했습니다.");
-  }
-  return unique.slice(0, 4);
+  return row.evaluation.reasons.slice(0, 4);
 }
 
 function renderCategoryFilter() {
@@ -620,7 +672,7 @@ SKU: FSH-JK-301
     const selected = document.getElementById("finalDecisionSelect").value;
     state.decisions[state.selectedId] = selected;
     saveState();
-    document.getElementById("decisionMsg").textContent = "최종 처리 결정을 저장했습니다.";
+    document.getElementById("decisionMsg").textContent = "최종 처리 결정이 저장되었습니다. 운영 현황에 반영되었습니다.";
     renderAll();
   });
 
