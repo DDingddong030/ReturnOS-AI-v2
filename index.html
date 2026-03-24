@@ -73,6 +73,7 @@
             <p id="savedCount" class="value">0</p>
           </article>
         </div>
+        <p class="help">예상 절감 효과는 기본 폐기 처리 대비 추천 처리안 적용 시 절감 가능한 금액입니다.</p>
 
         <div class="grid-2">
           <article class="card">
@@ -152,6 +153,7 @@
         <div class="grid-2">
           <article class="card">
             <h3>반품 1건 직접 입력</h3>
+            <p class="help">저장 후 반품 목록에 추가되며 추천 처리안이 자동 계산됩니다.</p>
             <form id="manualForm" class="form-grid">
               <h4 class="full form-title">1. 기본 정보</h4>
               <label>주문번호<input name="orderId" required placeholder="주문번호 예: ORD-2026-00125" /></label>
@@ -244,8 +246,16 @@
           <button id="backToListBtn" type="button">목록으로 돌아가기</button>
         </div>
         <article class="card">
-          <h3>반품 기본 정보</h3>
-          <div id="detailInfo" class="detail-grid"></div>
+          <div class="grid-2 detail-sections">
+            <div>
+              <h3>기본 정보</h3>
+              <div id="detailBasicInfo" class="detail-grid"></div>
+            </div>
+            <div>
+              <h3>비용/가치 정보</h3>
+              <div id="detailCostInfo" class="detail-grid"></div>
+            </div>
+          </div>
         </article>
         <article class="card">
           <h3>처리안별 예상 손익 비교</h3>

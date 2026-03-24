@@ -89,7 +89,8 @@ tr.clickable:hover { background: #f0f5ff; cursor: pointer; }
 .form-actions { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
 .help { color: var(--muted); font-size: 13px; }
 .csv-actions { display: grid; gap: 10px; }
-.detail-grid { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 10px; }
+.detail-sections { gap: 16px; }
+.detail-grid { display: grid; grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 10px; }
 .detail-item { background: #f8fafc; border: 1px solid var(--line); padding: 8px; border-radius: 8px; }
 .detail-item dt { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .detail-item dd { margin: 0; font-weight: 600; }

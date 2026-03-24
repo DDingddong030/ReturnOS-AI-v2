@@ -325,27 +325,33 @@ function renderList(rows) {
 
 function renderDetail(row) {
   if (!row) return;
-  const info = {
+  const adjusted = applyPolicyValues(row);
+  const basicInfo = {
     주문번호: row.orderId,
-    상품코드: row.sku,
+    SKU: row.sku,
     카테고리: row.category,
-    판매가: formatKRW(row.sellingPrice),
-    반품사유: row.returnReason,
+    "반품 사유": row.returnReason,
     "상품 상태": row.conditionGrade,
-    "시즌 종료까지 남은 일수": `${row.seasonDaysLeft}일`,
-    "현재 재고 수준": `${row.currentStock}`,
-    "회수 배송비": formatKRW(applyPolicyValues(row).returnShippingCost),
-    "재포장 비용": formatKRW(applyPolicyValues(row).repackagingCost),
-    "재판매 가치": formatKRW(row.resaleValue),
-    "할인전환 가치": formatKRW(row.discountSaleValue),
-    "공급사 반송 가능": row.vendorReturnEligible ? "가능" : "불가",
-    "공급사 반송 회수 가치": formatKRW(row.vendorReturnRecoveryValue),
-    "폐기 비용": formatKRW(row.disposalCost),
+    판매가: formatKRW(row.sellingPrice),
     수량: row.quantity,
-    메모: row.notes || "-"
+    "현재 재고": `${row.currentStock}`,
+    "시즌 종료까지 남은 일수": `${row.seasonDaysLeft}일`
   };
 
-  document.getElementById("detailInfo").innerHTML = Object.entries(info)
+  const costInfo = {
+    "회수 배송비": formatKRW(adjusted.returnShippingCost),
+    "재포장 비용": formatKRW(adjusted.repackagingCost),
+    "재판매 가능가치": formatKRW(row.resaleValue),
+    "할인전환 가능가치": formatKRW(row.discountSaleValue),
+    "공급사 반송 회수금액": formatKRW(row.vendorReturnRecoveryValue),
+    "폐기 비용": formatKRW(row.disposalCost)
+  };
+
+  document.getElementById("detailBasicInfo").innerHTML = Object.entries(basicInfo)
+    .map(([k, v]) => `<dl class="detail-item"><dt>${k}</dt><dd>${v}</dd></dl>`)
+    .join("");
+
+  document.getElementById("detailCostInfo").innerHTML = Object.entries(costInfo)
     .map(([k, v]) => `<dl class="detail-item"><dt>${k}</dt><dd>${v}</dd></dl>`)
     .join("");
 
@@ -360,7 +366,8 @@ function renderDetail(row) {
     `).join("");
 
   document.getElementById("recommendedAction").textContent = OPTION_LABELS[row.evaluation.recommendation];
-  document.getElementById("recommendationReasons").innerHTML = row.evaluation.reasons.map((x) => `<li>${x}</li>`).join("");
+  const reasons = buildDetailReasons(row);
+  document.getElementById("recommendationReasons").innerHTML = reasons.map((x) => `<li>${x}</li>`).join("");
 
   const select = document.getElementById("finalDecisionSelect");
   select.innerHTML = Object.entries(row.evaluation.options)
@@ -368,6 +375,22 @@ function renderDetail(row) {
     .map(([k]) => `<option value="${k}">${OPTION_LABELS[k]}</option>`)
     .join("");
   select.value = row.finalDecision || row.evaluation.recommendation;
+}
+
+
+function buildDetailReasons(row) {
+  const reasons = [...row.evaluation.reasons];
+  if (row.conditionGrade === "A") reasons.unshift("상품 상태가 양호합니다.");
+  if (row.resaleValue - applyPolicyValues(row).returnShippingCost > 15000) reasons.push("회수비 대비 재판매 가치가 높습니다.");
+  if (row.currentStock <= state.policy.lowStockThreshold) reasons.push("현재 재고가 낮아 재판매 우선순위가 높습니다.");
+  if (row.seasonDaysLeft <= state.policy.seasonUrgentThreshold) reasons.push("시즌 종료가 임박해 할인전환이 유리합니다.");
+  if (row.vendorReturnEligible && row.evaluation.recommendation === "vendorReturn") reasons.push("공급사 반송이 가능하며 손실이 가장 적습니다.");
+
+  const unique = Array.from(new Set(reasons));
+  if (unique.length < 3) {
+    unique.push("예상 손익이 가장 높은 처리안을 우선 추천했습니다.");
+  }
+  return unique.slice(0, 4);
 }
 
 function renderCategoryFilter() {
