@@ -281,7 +281,7 @@ function renderList(rows) {
 
   const body = document.getElementById("returnTableBody");
   if (!filtered.length) {
-    body.innerHTML = '<tr><td colspan="8" class="empty-state">조건에 맞는 반품 건이 없습니다.</td></tr>';
+    body.innerHTML = '<tr><td colspan="9" class="empty-state">조건에 맞는 반품 건이 없습니다.</td></tr>';
     return;
   }
 
@@ -298,14 +298,25 @@ function renderList(rows) {
           <td>${OPTION_LABELS[r.evaluation.recommendation]}</td>
           <td>${formatKRW(r.expectedValue)}</td>
           <td><span class="badge ${pClass}">${r.priority}</span></td>
+          <td><button type="button" class="analyze-btn" data-id="${r.id}">보기</button></td>
         </tr>
       `;
     })
     .join("");
 
   body.querySelectorAll("tr.clickable").forEach((tr) => {
-    tr.addEventListener("click", () => {
+    tr.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
       state.selectedId = tr.dataset.id;
+      renderDetail(rows.find((x) => x.id === state.selectedId));
+      switchTab("detail");
+    });
+  });
+
+  body.querySelectorAll(".analyze-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      state.selectedId = btn.dataset.id;
       renderDetail(rows.find((x) => x.id === state.selectedId));
       switchTab("detail");
     });
@@ -504,6 +515,24 @@ SKU: FSH-JK-301
 회수 배송비: 3500
 현재 재고: 12
 시즌 종료까지 남은 일수: 18`);
+  });
+
+  document.getElementById("dashSampleBtn")?.addEventListener("click", () => {
+    state.returns = JSON.parse(JSON.stringify(window.SEED_RETURNS));
+    state.decisions = {};
+    saveState();
+    renderAll();
+    switchTab("list");
+  });
+
+  document.getElementById("dashManualBtn")?.addEventListener("click", () => {
+    switchTab("entry");
+    document.querySelector('#manualForm input[name="orderId"]')?.focus();
+  });
+
+  document.getElementById("dashCsvBtn")?.addEventListener("click", () => {
+    switchTab("entry");
+    document.getElementById("csvInput")?.focus();
   });
 
   document.getElementById("manualForm").addEventListener("submit", (e) => {
