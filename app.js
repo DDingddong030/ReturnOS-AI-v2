@@ -122,38 +122,38 @@ function calculateOptions(item) {
 
   if (row.currentStock <= state.policy.lowStockThreshold && row.conditionGrade === "A") {
     adjustedScores.resale += 3500;
-    reasons.push("현재 재고가 부족하여 재판매 우선순위가 높음");
+    reasons.push("현재 재고가 낮아 재판매 우선순위가 높습니다.");
   }
   if (row.seasonDaysLeft <= state.policy.seasonUrgentThreshold) {
     adjustedScores.discount += 2800;
-    reasons.push("시즌 종료가 임박하여 할인전환이 유리함");
+    reasons.push("시즌 종료가 임박해 할인전환이 유리합니다.");
   }
   if (row.conditionGrade === "C") {
     adjustedScores.resale -= 4500;
     adjustedScores.repackagedResale -= 2500;
-    reasons.push("상품 상태가 낮아 일반 재판매 점수가 하향 조정됨");
+    reasons.push("상품 상태가 좋지 않아 일반 재판매 점수를 낮췄습니다.");
   }
   if (row.conditionGrade === "A") {
     adjustedScores.resale += 1000;
-    reasons.push("상품 상태가 양호함");
+    reasons.push("상품 상태가 양호합니다.");
   }
   if (row.vendorReturnEligible) {
     adjustedScores.vendorReturn += 1200;
-    reasons.push("공급사 반송 가능 대상임");
+    reasons.push("공급사 반송이 가능하며 손실이 가장 적은지 함께 비교했습니다.");
   }
   if (row.resaleValue <= state.policy.disposalValueThreshold && row.returnShippingCost >= 3000) {
     adjustedScores.dispose += 3000;
-    reasons.push("저가 상품으로 회수비 부담이 커 폐기 대안이 검토됨");
+    reasons.push("저가 상품이라 회수비 부담이 커 폐기 대안도 검토했습니다.");
   }
   if (row.resaleValue - row.returnShippingCost > 15000) {
-    reasons.push("회수비 대비 재판매 가치가 높음");
+    reasons.push("회수비 대비 재판매 가치가 높습니다.");
   }
 
   const valid = Object.entries(adjustedScores).filter(([, v]) => Number.isFinite(v));
   valid.sort((a, b) => b[1] - a[1]);
   const [bestKey] = valid[0] || ["dispose"];
 
-  if (reasons.length === 0) reasons.push("금융 손익 기준으로 가장 유리한 처리안이 선택됨");
+  if (reasons.length === 0) reasons.push("손익 기준으로 가장 유리한 처리안을 선택했습니다.");
 
   return {
     options,
@@ -476,6 +476,36 @@ function bindEvents() {
     document.getElementById(id).addEventListener("change", renderAll);
   });
 
+
+  document.getElementById("startLoadSampleBtn")?.addEventListener("click", () => {
+    state.returns = JSON.parse(JSON.stringify(window.SEED_RETURNS));
+    state.decisions = {};
+    saveState();
+    document.getElementById("startMsg").textContent = "샘플 데이터를 불러왔습니다. 반품 목록에서 바로 확인하세요.";
+    renderAll();
+    switchTab("list");
+  });
+
+  document.getElementById("startManualBtn")?.addEventListener("click", () => {
+    switchTab("entry");
+    document.querySelector('#manualForm input[name="orderId"]')?.focus();
+  });
+
+  document.getElementById("startCsvBtn")?.addEventListener("click", () => {
+    switchTab("entry");
+    document.getElementById("csvInput")?.focus();
+  });
+
+  document.getElementById("showExampleBtn")?.addEventListener("click", () => {
+    alert(`입력 예시
+주문번호: ORD-2026-00125
+SKU: FSH-JK-301
+판매가: 59000
+회수 배송비: 3500
+현재 재고: 12
+시즌 종료까지 남은 일수: 18`);
+  });
+
   document.getElementById("manualForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -499,7 +529,7 @@ function bindEvents() {
     const file = input.files?.[0];
     const msg = document.getElementById("csvMsg");
     if (!file) {
-      msg.textContent = "CSV 파일을 먼저 선택해 주세요.";
+      msg.textContent = "업로드할 CSV 파일을 먼저 선택해 주세요.";
       return;
     }
     try {
@@ -511,7 +541,7 @@ function bindEvents() {
       input.value = "";
       renderAll();
     } catch (err) {
-      msg.textContent = `CSV 오류: ${err.message}`;
+      msg.textContent = `업로드 오류: ${err.message}`;
     }
   });
 
@@ -527,7 +557,7 @@ function bindEvents() {
       seasonUrgentThreshold: parseNumber(fd.get("seasonUrgentThreshold"))
     };
     saveState();
-    document.getElementById("policyMsg").textContent = "정책이 저장되었고 추천 결과에 즉시 반영되었습니다.";
+    document.getElementById("policyMsg").textContent = "정책을 저장했고 추천 결과에 바로 반영했습니다.";
     renderAll();
   });
 
@@ -538,12 +568,12 @@ function bindEvents() {
     const selected = document.getElementById("finalDecisionSelect").value;
     state.decisions[state.selectedId] = selected;
     saveState();
-    document.getElementById("decisionMsg").textContent = "최종 결정이 저장되었습니다.";
+    document.getElementById("decisionMsg").textContent = "최종 처리 결정을 저장했습니다.";
     renderAll();
   });
 
   document.getElementById("resetDemoBtn").addEventListener("click", () => {
-    if (!confirm("현재 데이터와 저장된 결정/정책을 초기화하고 데모 데이터로 되돌리시겠습니까?")) return;
+    if (!confirm("현재 데이터와 저장된 결정·정책을 모두 지우고 샘플 데이터로 다시 시작할까요?")) return;
     state.returns = JSON.parse(JSON.stringify(window.SEED_RETURNS));
     state.decisions = {};
     state.policy = { ...DEFAULT_POLICY };

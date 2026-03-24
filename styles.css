@@ -46,10 +46,7 @@ h1 { margin: 0 0 8px; font-size: 24px; }
 main { padding: 18px 24px 28px; }
 .panel { display: none; }
 .panel.active { display: block; }
-.cards, .grid-2 {
-  display: grid;
-  gap: 12px;
-}
+.cards, .grid-2 { display: grid; gap: 12px; }
 .cards { grid-template-columns: repeat(4, minmax(180px, 1fr)); margin-bottom: 12px; }
 .grid-2 { grid-template-columns: 1fr 1fr; }
 .card {
@@ -76,33 +73,23 @@ button { cursor: pointer; background: #fff; }
 button:hover { border-color: var(--primary); }
 button.danger { color: var(--danger); border-color: #e0a8a8; }
 .table-wrap { overflow-x: auto; }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-th, td {
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  padding: 10px 8px;
-}
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { border-bottom: 1px solid var(--line); text-align: left; padding: 10px 8px; }
 tr.clickable:hover { background: #f0f5ff; cursor: pointer; }
 .empty-state { color: var(--muted); text-align: center; padding: 16px; }
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(160px, 1fr));
-  gap: 10px;
-}
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(160px, 1fr)); gap: 10px; }
 .form-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 .form-grid .full, .form-actions.full { grid-column: 1 / -1; }
+.form-title {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  font-size: 14px;
+}
 .form-actions { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
 .help { color: var(--muted); font-size: 13px; }
 .csv-actions { display: grid; gap: 10px; }
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
-  gap: 10px;
-}
+.detail-grid { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 10px; }
 .detail-item { background: #f8fafc; border: 1px solid var(--line); padding: 8px; border-radius: 8px; }
 .detail-item dt { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .detail-item dd { margin: 0; font-weight: 600; }
@@ -115,9 +102,15 @@ tr.clickable:hover { background: #f0f5ff; cursor: pointer; }
 .badge.high { background: #fde8e8; color: #9f2f2f; }
 .badge.mid { background: #fff7e6; color: #946200; }
 .badge.low { background: #eaf7ed; color: #2e6c38; }
+.start-card { max-width: 900px; }
+.start-lead { margin-top: 0; font-size: 16px; line-height: 1.6; }
+.start-actions { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 10px; margin: 14px 0; }
+.start-links { display: flex; gap: 10px; align-items: center; }
+
 @media (max-width: 1100px) {
   .cards { grid-template-columns: repeat(2, 1fr); }
   .toolbar { grid-template-columns: 1fr 1fr; }
   .grid-2 { grid-template-columns: 1fr; }
   .detail-grid { grid-template-columns: repeat(2, 1fr); }
+  .start-actions { grid-template-columns: 1fr; }
 }
